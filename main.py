@@ -38,7 +38,7 @@ def generate_seo(data: SEORequest, x_api_key: str = Header(None)):
         messages=[
             {"role": "user", "content": prompt}
         ],
-        max_tokens=200
+        max_tokens=250
     )
 
     keys[x_api_key]["used"] += 1

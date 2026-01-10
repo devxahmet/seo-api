@@ -1,15 +1,12 @@
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
+import json
 
 app = FastAPI(
     title="SEO Ürün Açıklaması API",
-    description="E-ticaret için SEO uyumlu ürün açıklaması üretir",
-    version="1.0.0"
+    version="1.1.0"
 )
-
-# Basit API key (şimdilik)
-API_KEY = "localhostxdevmainn"
 
 class ProductRequest(BaseModel):
     urun_adi: str
@@ -17,30 +14,49 @@ class ProductRequest(BaseModel):
     ozellikler: List[str]
     platform: Optional[str] = "Genel"
 
+def load_keys():
+    with open("keys.json", "r") as f:
+        return json.load(f)
+
+def save_keys(data):
+    with open("keys.json", "w") as f:
+        json.dump(data, f, indent=2)
+
 @app.post("/generate")
-def generate_description(
+def generate(
     data: ProductRequest,
     x_api_key: str = Header(None)
 ):
-    if x_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="Geçersiz API Key")
+    if not x_api_key:
+        raise HTTPException(status_code=401, detail="API key gerekli")
 
-    features_text = "\n".join([f"- {o}" for o in data.ozellikler])
+    keys = load_keys()
+
+    if x_api_key not in keys:
+        raise HTTPException(status_code=403, detail="Geçersiz API key")
+
+    user = keys[x_api_key]
+
+    if user["used"] >= user["limit"]:
+        raise HTTPException(status_code=429, detail="Aylık limit doldu")
+
+    user["used"] += 1
+    save_keys(keys)
+
+    features = "\n".join([f"- {o}" for o in data.ozellikler])
 
     description = f"""
-{data.urun_adi} ürünü, {data.kategori} kategorisinde yer almakta olup {data.platform} platformu için
-özel olarak hazırlanmıştır.
+{data.urun_adi} ürünü {data.kategori} kategorisinde yer alır.
+{data.platform} platformu için SEO uyumlu olarak hazırlanmıştır.
 
 Öne Çıkan Özellikler:
-{features_text}
+{features}
 
-Kaliteli malzeme yapısı ve kullanıcı dostu tasarımı sayesinde günlük kullanım için idealdir.
-SEO uyumlu ve satış odaklı bu açıklama, platform kurallarına uygundur.
+Satış odaklı, özgün ve platform kurallarına uygundur.
 """
 
     return {
-        "urun_adi": data.urun_adi,
-        "platform": data.platform,
+        "kalan_hak": user["limit"] - user["used"],
         "seo_aciklama": description.strip()
     }
 

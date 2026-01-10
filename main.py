@@ -1,65 +1,50 @@
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional
 import json
+import os
+from openai import OpenAI
 
-app = FastAPI(
-    title="SEO Ürün Açıklaması API",
-    version="1.1.0"
-)
+app = FastAPI(title="SEO Description API")
 
-class ProductRequest(BaseModel):
-    urun_adi: str
-    kategori: str
-    ozellikler: List[str]
-    platform: Optional[str] = "Genel"
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+class SEORequest(BaseModel):
+    title: str
+    keywords: str
 
 def load_keys():
     with open("keys.json", "r") as f:
         return json.load(f)
 
-def save_keys(data):
-    with open("keys.json", "w") as f:
-        json.dump(data, f, indent=2)
-
-@app.post("/generate")
-def generate(
-    data: ProductRequest,
-    x_api_key: str = Header(None)
-):
-    if not x_api_key:
-        raise HTTPException(status_code=401, detail="API key gerekli")
-
+@app.post("/generate-seo")
+def generate_seo(data: SEORequest, x_api_key: str = Header(None)):
     keys = load_keys()
 
     if x_api_key not in keys:
-        raise HTTPException(status_code=403, detail="Geçersiz API key")
+        raise HTTPException(status_code=401, detail="Invalid API Key")
 
-    user = keys[x_api_key]
+    if keys[x_api_key]["used"] >= keys[x_api_key]["limit"]:
+        raise HTTPException(status_code=429, detail="API limit exceeded")
 
-    if user["used"] >= user["limit"]:
-        raise HTTPException(status_code=429, detail="Aylık limit doldu")
+    prompt = f"""
+    Ürün adı: {data.title}
+    Anahtar kelimeler: {data.keywords}
 
-    user["used"] += 1
-    save_keys(keys)
+    E-ticaret için SEO uyumlu, özgün, satış odaklı bir ürün açıklaması yaz.
+    """
 
-    features = "\n".join([f"- {o}" for o in data.ozellikler])
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=200
+    )
 
-    description = f"""
-{data.urun_adi} ürünü {data.kategori} kategorisinde yer alır.
-{data.platform} platformu için SEO uyumlu olarak hazırlanmıştır.
-
-Öne Çıkan Özellikler:
-{features}
-
-Satış odaklı, özgün ve platform kurallarına uygundur.
-"""
+    keys[x_api_key]["used"] += 1
+    with open("keys.json", "w") as f:
+        json.dump(keys, f, indent=2)
 
     return {
-        "kalan_hak": user["limit"] - user["used"],
-        "seo_aciklama": description.strip()
+        "seo_description": response.choices[0].message.content
     }
-
-@app.get("/")
-def root():
-    return {"status": "API çalışıyor"}

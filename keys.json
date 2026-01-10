@@ -1,6 +1,17 @@
 {
-  "localhostxdevmainn": {
+  "basic_abc123": {
+    "plan": "basic",
     "limit": 1000,
+    "used": 0
+  },
+  "pro_xyz789": {
+    "plan": "pro",
+    "limit": 10000,
+    "used": 0
+  },
+  "agency_999": {
+    "plan": "agency",
+    "limit": -1,
     "used": 0
   }
 }

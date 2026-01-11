@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Header, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
@@ -10,13 +11,11 @@ from openai import OpenAI
 # --------------------
 # DATABASE
 # --------------------
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./seo_api.db")  # Render'da env variable ile değiştir
-
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./seo_api.db")
 engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
 )
-
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
@@ -41,11 +40,14 @@ app = FastAPI(title="SEO Description API")
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # test için tüm frontendler
+    allow_origins=["*"],  # tüm frontendler için
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Static files (index.html)
+app.mount("/", StaticFiles(directory=os.path.dirname(__file__), html=True), name="static")
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -60,7 +62,7 @@ class CreateKeyRequest(BaseModel):
     plan: str
 
 # --------------------
-# DB DEP
+# DB DEPENDENCY
 # --------------------
 def get_db():
     db = SessionLocal()
@@ -148,6 +150,6 @@ def generate_seo(
 # --------------------
 # ROOT
 # --------------------
-@app.get("/")
+@app.get("/health")
 def root():
-    return {"status": "ok", "message": "SQL-backed SEO API running"}
+    return {"status": "ok", "message": "SEO API running"}

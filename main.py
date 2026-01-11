@@ -1,16 +1,17 @@
 from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 import os, secrets, bcrypt, datetime
 from openai import OpenAI
 
-# Environment variables
+# Env vars
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./seo_api.db")
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 
-# Database setup
+# DB setup
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
@@ -36,14 +37,16 @@ class Payment(Base):
 
 Base.metadata.create_all(bind=engine)
 
-# FastAPI app
+# FastAPI
 app = FastAPI(title="SEO WebApp API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-# OpenAI client
+# Static mount
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
+# OpenAI
 client = OpenAI(api_key=OPENAI_KEY)
 
-# DB dependency
 def get_db():
     db = SessionLocal()
     try:
@@ -67,7 +70,7 @@ class SEORequest(BaseModel):
 class PlanRequest(BaseModel):
     plan: str
 
-# Auth endpoints
+# Auth
 @app.post("/register")
 def register(data: RegisterRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.username==data.username).first()
@@ -86,7 +89,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(401, "Kullanıcı adı veya şifre yanlış")
     return {"message":"Giriş başarılı", "api_key":user.api_key}
 
-# SEO API endpoint
+# SEO API
 @app.post("/generate-seo")
 def generate_seo(data: SEORequest, x_api_key: str = Header(...), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.api_key==x_api_key).first()
@@ -98,13 +101,12 @@ def generate_seo(data: SEORequest, x_api_key: str = Header(...), db: Session = D
     db.commit()
     return {"plan":user.plan,"used":user.used,"limit":user.limit,"seo_description":response.choices[0].message.content}
 
-# API Key / Plan endpoint
+# API Key / Plan
 @app.post("/create-api-key")
 def create_key(data: PlanRequest, x_api_key: str = Header(...), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.api_key==x_api_key).first()
     if not user: raise HTTPException(401, "Geçersiz API Key")
 
-    # Eğer hâlihazırda aktif API Key varsa
     if user.used < user.limit or user.limit == -1:
         return {"message": "Zaten aktif bir API Key'in var, plan bitene kadar yeni oluşturamazsın.", 
                 "api_key": user.api_key, 
@@ -123,7 +125,7 @@ def create_key(data: PlanRequest, x_api_key: str = Header(...), db: Session = De
     db.commit()
     return {"message":"Yeni API Key oluşturuldu", "api_key":new_api_key, "plan":user.plan, "limit":user.limit}
 
-# Ödeme webhook (PayTR / Shopier)
+# Ödeme webhook
 @app.post("/payment-webhook")
 def payment_webhook(user_id: int, amount: int, status: str, db: Session = Depends(get_db)):
     payment = Payment(user_id=user_id, amount=amount, status=status)

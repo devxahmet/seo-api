@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SEO API Demo</title>
 <style>
-  /* BEM & modern CSS */
+  /* Modern BEM & Animasyon */
   body {
     font-family: 'Arial', sans-serif;
     background: linear-gradient(135deg, #f0f4ff, #d9e8ff);
@@ -110,7 +110,7 @@
 
   <!-- API Key oluştur -->
   <div class="seo-container__field">
-    <button class="seo-container__btn" onclick="createKey()">API Key Oluştur</button>
+    <button id="createKeyBtn" class="seo-container__btn">API Key Oluştur</button>
     <div id="keyResult" class="seo-container__result"></div>
   </div>
 
@@ -127,7 +127,7 @@
 
   <!-- SEO Oluştur -->
   <div class="seo-container__field">
-    <button class="seo-container__btn" onclick="generateSEO()">SEO Açıklama Oluştur</button>
+    <button id="generateBtn" class="seo-container__btn">SEO Açıklama Oluştur</button>
   </div>
 
   <div id="seoResult" class="seo-container__result"></div>
@@ -136,41 +136,50 @@
 <script>
 const API_BASE = "https://seo-api-8qsy.onrender.com"; // Backend URL’in
 
+// Event listener ile JS DOM yüklenince bağlanıyor
+document.getElementById("createKeyBtn").addEventListener("click", createKey);
+document.getElementById("generateBtn").addEventListener("click", generateSEO);
+
 async function createKey() {
   const plan = document.getElementById("planSelect").value;
 
-  const res = await fetch(API_BASE + "/create-api-key", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ plan })
-  });
+  try {
+    const res = await fetch(API_BASE + "/create-api-key", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan })
+    });
 
-  const data = await res.json();
-  document.getElementById("keyResult").innerText = "API Key:\n" + data.api_key;
-  document.getElementById("apiKey")?.value = data.api_key;
+    const data = await res.json();
+    document.getElementById("keyResult").innerText = "API Key:\n" + data.api_key;
+  } catch (err) {
+    console.error(err);
+    alert("API Key oluşturulamadı!");
+  }
 }
 
 async function generateSEO() {
-  const apiKey = document.getElementById("apiKey")?.value || document.getElementById("keyResult").innerText.split("\n")[1];
+  const apiKey = document.getElementById("keyResult").innerText.split("\n")[1];
   const title = document.getElementById("title").value;
   const keywords = document.getElementById("keywords").value;
 
   if (!apiKey) { alert("Önce API Key oluşturun!"); return; }
   if (!title || !keywords) { alert("Ürün adı ve anahtar kelimeleri girin!"); return; }
 
-  const res = await fetch(API_BASE + "/generate-seo", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey
-    },
-    body: JSON.stringify({ title, keywords })
-  });
+  try {
+    const res = await fetch(API_BASE + "/generate-seo", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey
+      },
+      body: JSON.stringify({ title, keywords })
+    });
 
-  const data = await res.json();
-  if (data.seo_description) {
-    document.getElementById("seoResult").innerText = data.seo_description;
-  } else {
+    const data = await res.json();
+    document.getElementById("seoResult").innerText = data.seo_description || "Hata oluştu!";
+  } catch (err) {
+    console.error(err);
     document.getElementById("seoResult").innerText = "Hata oluştu!";
   }
 }

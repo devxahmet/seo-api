@@ -1,59 +1,52 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SEO WebApp</title>
-<link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8" />
+  <title>SeoX API</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body class="dark-theme">
-<div class="container">
+<body>
 
-  <!-- Header -->
-  <header class="header">
-    <h1 id="pageTitle">SEO Açıklama Oluştur</h1>
-    <div class="header-buttons">
-      <button id="themeToggle">🌙</button>
-      <button id="langToggle">EN</button>
+<div class="container" id="container">
+
+  <!-- REGISTER -->
+  <div class="form-container sign-up-container">
+    <form>
+      <h1>Hesap Oluştur</h1>
+      <input type="email" id="regEmail" placeholder="E-posta" />
+      <input type="password" id="regPassword" placeholder="Şifre" />
+      <button onclick="register(event)">Kayıt Ol</button>
+    </form>
+  </div>
+
+  <!-- LOGIN -->
+  <div class="form-container sign-in-container">
+    <form>
+      <h1>Giriş Yap</h1>
+      <input type="email" id="loginEmail" placeholder="E-posta" />
+      <input type="password" id="loginPassword" placeholder="Şifre" />
+      <button onclick="login(event)">Giriş Yap</button>
+    </form>
+  </div>
+
+  <!-- OVERLAY -->
+  <div class="overlay-container">
+    <div class="overlay">
+      <div class="overlay-panel overlay-left">
+        <h1>Tekrar Hoş Geldin 👋</h1>
+        <p>SeoX API paneline giriş yap</p>
+        <button class="ghost" id="signIn">Giriş Yap</button>
+      </div>
+      <div class="overlay-panel overlay-right">
+        <h1>SeoX API</h1>
+        <p>SEO içeriklerini saniyeler içinde üret</p>
+        <button class="ghost" id="signUp">Kayıt Ol</button>
+      </div>
     </div>
-  </header>
-
-  <!-- Kullanıcı Girişi / Kaydol -->
-  <div class="auth-container">
-    <input type="text" id="username" placeholder="Kullanıcı Adı">
-    <input type="password" id="password" placeholder="Şifre">
-    <button id="registerBtn">Kayıt Ol</button>
-    <button id="loginBtn">Giriş Yap</button>
-  </div>
-
-  <!-- Plan ve API Key -->
-  <div class="seo-container">
-    <label id="planLabel">Plan Seçiniz</label>
-    <select id="planSelect">
-      <option value="basic">Basic</option>
-      <option value="pro">Pro</option>
-      <option value="agency">Agency</option>
-    </select>
-    <button id="createKeyBtn">API Key Oluştur</button>
-    <div id="keyResult" class="result"></div>
-  </div>
-
-  <!-- SEO Oluştur -->
-  <div class="seo-container">
-    <label id="productNameLabel">Ürün Adı</label>
-    <input type="text" id="title">
-    <label id="keywordsLabel">Anahtar Kelimeler</label>
-    <input type="text" id="keywords">
-    <button id="generateBtn">SEO Açıklama Oluştur</button>
-    <div id="seoResult" class="result"></div>
-  </div>
-
-  <!-- Ödeme -->
-  <div class="payment-container">
-    <button id="payBtn">Plan Satın Al (PayTR/Shopier)</button>
   </div>
 
 </div>
-<script src="js/main.js"></script>
+
+<script src="main.js"></script>
 </body>
 </html>

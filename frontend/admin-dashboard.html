@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>SeoX Admin Dashboard</title>
+<style>
+body {
+  background:#0b0b0b;
+  color:#fff;
+  font-family:Inter;
+  padding:40px;
+}
+h1 { margin-bottom:20px }
+
+.stats {
+  display:grid;
+  grid-template-columns: repeat(3,1fr);
+  gap:20px;
+}
+.card {
+  background:#111;
+  padding:20px;
+  border-radius:14px;
+  text-align:center;
+}
+.card h2 { font-size:32px; color:#4fd1c5 }
+
+canvas {
+  margin-top:40px;
+  background:#111;
+  border-radius:14px;
+  padding:20px;
+}
+input,button {
+  padding:10px;
+  margin-bottom:20px;
+}
+</style>
+</head>
+<body>
+
+<h1>SeoX Admin Dashboard</h1>
+
+<input id="token" placeholder="Admin Token">
+<button onclick="load()">Yükle</button>
+
+<div class="stats">
+  <div class="card">
+    <p>Toplam Kullanıcı</p>
+    <h2 id="total">0</h2>
+  </div>
+  <div class="card">
+    <p>Aktif API Key</p>
+    <h2 id="active">0</h2>
+  </div>
+  <div class="card">
+    <p>Kapalı Hesap</p>
+    <h2 id="disabled">0</h2>
+  </div>
+</div>
+
+<canvas id="chart" width="600" height="300"></canvas>
+
+<script>
+const API = "https://seo-api-8qsy.onrender.com/";
+
+function load(){
+  const token = document.getElementById("token").value;
+
+  fetch(`${API}/admin/stats?token=${token}`)
+    .then(r=>r.json())
+    .then(d=>{
+      document.getElementById("total").innerText = d.total_users;
+      document.getElementById("active").innerText = d.active_keys;
+      document.getElementById("disabled").innerText = d.disabled_users;
+      drawChart(d);
+    })
+}
+
+function drawChart(data){
+  const c = document.getElementById("chart");
+  const ctx = c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+
+  const values = [
+    data.total_users,
+    data.active_keys,
+    data.disabled_users
+  ];
+
+  const labels = ["Toplam", "Aktif", "Kapalı"];
+  const max = Math.max(...values);
+
+  values.forEach((v,i)=>{
+    const barHeight = (v/max)*200;
+    ctx.fillStyle="#4fd1c5";
+    ctx.fillRect(80+i*160,250-barHeight,80,barHeight);
+    ctx.fillText(labels[i],90+i*160,270);
+  });
+}
+</script>
+
+</body>
+</html>

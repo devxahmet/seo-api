@@ -1,0 +1,17 @@
+<h1>Dashboard</h1>
+<button onclick="createKey()">API Key Oluştur</button>
+<pre id="result"></pre>
+
+<script>
+const token = localStorage.getItem("token");
+
+function createKey(){
+  fetch("https://seo-api-8qsy.onrender/create-api-key",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ token })
+  })
+  .then(r=>r.json())
+  .then(d=> document.getElementById("result").innerText = JSON.stringify(d,null,2))
+}
+</script>

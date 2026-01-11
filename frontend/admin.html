@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>SeoX Admin</title>
+  <style>
+    body { background:#0b0b0b; color:#fff; font-family:Inter }
+    table { width:100%; border-collapse:collapse }
+    td,th { padding:12px; border-bottom:1px solid #222 }
+    button { padding:6px 12px; margin:2px }
+  </style>
+</head>
+<body>
+
+<h1>SeoX Admin Panel</h1>
+
+<input id="token" placeholder="Admin Token" />
+<button onclick="loadUsers()">Kullanıcıları Getir</button>
+
+<table>
+  <thead>
+    <tr>
+      <th>ID</th><th>Email</th><th>API Key</th><th>Bitiş</th><th>İşlem</th>
+    </tr>
+  </thead>
+  <tbody id="users"></tbody>
+</table>
+
+<script>
+const API = "https://seo-api-8qsy.onrender.com";
+
+function loadUsers(){
+  const token = document.getElementById("token").value;
+  fetch(`${API}/admin/users?token=${token}`)
+    .then(r=>r.json())
+    .then(data=>{
+      const tbody = document.getElementById("users");
+      tbody.innerHTML = "";
+      data.forEach(u=>{
+        tbody.innerHTML += `
+        <tr>
+          <td>${u.id}</td>
+          <td>${u.email}</td>
+          <td>${u.api_key || "-"}</td>
+          <td>${u.expires || "-"}</td>
+          <td>
+            <button onclick="revoke(${u.id})">Key Sil</button>
+            <button onclick="disable(${u.id})">Kapat</button>
+          </td>
+        </tr>`;
+      });
+    })
+}
+
+function revoke(id){
+  send(`/admin/revoke-key?user_id=${id}`);
+}
+
+function disable(id){
+  send(`/admin/disable-user?user_id=${id}`);
+}
+
+function send(url){
+  const token = document.getElementById("token").value;
+  fetch(API + url + `&token=${token}`, { method:"POST" })
+    .then(()=>loadUsers());
+}
+</script>
+
+</body>
+</html>

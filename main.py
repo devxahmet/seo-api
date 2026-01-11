@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Header, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
@@ -9,11 +10,11 @@ from openai import OpenAI
 # --------------------
 # DATABASE
 # --------------------
-DATABASE_URL = "sqlite:///./seo_api.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./seo_api.db")  # Render'da env variable ile değiştir
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False}
+    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
 )
 
 SessionLocal = sessionmaker(bind=engine)
@@ -24,7 +25,6 @@ Base = declarative_base()
 # --------------------
 class APIKey(Base):
     __tablename__ = "api_keys"
-
     id = Column(Integer, primary_key=True, index=True)
     api_key = Column(String, unique=True, index=True)
     plan = Column(String)
@@ -34,14 +34,23 @@ class APIKey(Base):
 Base.metadata.create_all(bind=engine)
 
 # --------------------
-# UYGULAMA
+# APP
 # --------------------
 app = FastAPI(title="SEO Description API")
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # test için tüm frontendler
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # --------------------
-# SCHEMA
+# SCHEMAS
 # --------------------
 class SEORequest(BaseModel):
     title: str
@@ -51,7 +60,7 @@ class CreateKeyRequest(BaseModel):
     plan: str
 
 # --------------------
-# DATABASE
+# DB DEP
 # --------------------
 def get_db():
     db = SessionLocal()
@@ -61,7 +70,7 @@ def get_db():
         db.close()
 
 # --------------------
-# APİ KEY OLUŞTURMA
+# CREATE API KEY
 # --------------------
 @app.post("/create-api-key")
 def create_api_key(data: CreateKeyRequest, db: Session = Depends(get_db)):
@@ -93,7 +102,7 @@ def create_api_key(data: CreateKeyRequest, db: Session = Depends(get_db)):
     }
 
 # --------------------
-#  SEO üRETİMİ
+# GENERATE SEO
 # --------------------
 @app.post("/generate-seo")
 def generate_seo(

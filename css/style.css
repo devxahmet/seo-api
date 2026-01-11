@@ -1,0 +1,19 @@
+/* Temalar */
+body.dark-theme { background: #121212; color: #f0f0f0; transition: all 0.3s; }
+body.light-theme { background: #fff; color: #121212; transition: all 0.3s; }
+
+.container { max-width: 500px; margin: 0 auto; padding: 20px; }
+.header { display: flex; justify-content: space-between; align-items: center; }
+.header-buttons button { margin-left: 10px; cursor: pointer; transition: 0.3s; }
+.header-buttons button:hover { transform: scale(1.1); }
+
+.auth-container, .seo-container, .payment-container { margin-top: 20px; display: flex; flex-direction: column; }
+.auth-container input, .seo-container input, .seo-container select { margin-bottom: 10px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; transition: 0.3s; }
+.auth-container input:focus, .seo-container input:focus, .seo-container select:focus { border-color: #4a90e2; box-shadow: 0 0 5px rgba(74,144,226,0.5); outline: none; }
+
+button { padding: 12px; border: none; border-radius: 8px; background: #4a90e2; color: #fff; font-weight: bold; cursor: pointer; transition: 0.3s; }
+button:hover { background: #357ab8; transform: scale(1.02); }
+
+.result { margin-top: 10px; padding: 10px; border-radius: 8px; background: #f7f9ff; color: #000; font-size: 14px; white-space: pre-wrap; }
+
+.dark-theme .result { background: #1f1f1f; color: #fff; }

@@ -3,187 +3,57 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SEO API Demo</title>
-<style>
-  /* Modern BEM & Animasyon */
-  body {
-    font-family: 'Arial', sans-serif;
-    background: linear-gradient(135deg, #f0f4ff, #d9e8ff);
-    margin: 0; padding: 0;
-    display: flex; justify-content: center; align-items: center; height: 100vh;
-  }
-
-  .seo-container {
-    background: #fff;
-    border-radius: 12px;
-    padding: 30px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    width: 100%;
-    max-width: 450px;
-    animation: fadeIn 1s ease;
-  }
-
-  @keyframes fadeIn {
-    from {opacity:0; transform: translateY(-20px);}
-    to {opacity:1; transform: translateY(0);}
-  }
-
-  .seo-container__title {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 20px;
-    text-align: center;
-    color: #333;
-  }
-
-  .seo-container__field {
-    margin-bottom: 15px;
-  }
-
-  .seo-container__field label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    color: #555;
-  }
-
-  .seo-container__field input,
-  .seo-container__field select,
-  .seo-container__field textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    transition: 0.3s;
-    font-size: 14px;
-  }
-
-  .seo-container__field input:focus,
-  .seo-container__field select:focus,
-  .seo-container__field textarea:focus {
-    border-color: #4a90e2;
-    outline: none;
-    box-shadow: 0 0 5px rgba(74,144,226,0.5);
-  }
-
-  .seo-container__btn {
-    width: 100%;
-    padding: 12px;
-    background: #4a90e2;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.3s;
-  }
-
-  .seo-container__btn:hover {
-    background: #357ab8;
-  }
-
-  .seo-container__result {
-    margin-top: 20px;
-    padding: 15px;
-    background: #f7f9ff;
-    border-radius: 8px;
-    font-size: 14px;
-    white-space: pre-wrap;
-  }
-</style>
+<title>SEO WebApp</title>
+<link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="dark-theme">
+<div class="container">
 
-<div class="seo-container">
-  <div class="seo-container__title">SEO Description Generator</div>
+  <!-- Header -->
+  <header class="header">
+    <h1 id="pageTitle">SEO Açıklama Oluştur</h1>
+    <div class="header-buttons">
+      <button id="themeToggle">🌙</button>
+      <button id="langToggle">EN</button>
+    </div>
+  </header>
 
-  <!-- Paket seçimi -->
-  <div class="seo-container__field">
-    <label for="planSelect">Plan Seçiniz</label>
+  <!-- Kullanıcı Girişi / Kaydol -->
+  <div class="auth-container">
+    <input type="text" id="username" placeholder="Kullanıcı Adı">
+    <input type="password" id="password" placeholder="Şifre">
+    <button id="registerBtn">Kayıt Ol</button>
+    <button id="loginBtn">Giriş Yap</button>
+  </div>
+
+  <!-- Plan ve API Key -->
+  <div class="seo-container">
+    <label id="planLabel">Plan Seçiniz</label>
     <select id="planSelect">
       <option value="basic">Basic</option>
       <option value="pro">Pro</option>
       <option value="agency">Agency</option>
     </select>
-  </div>
-
-  <!-- API Key oluştur -->
-  <div class="seo-container__field">
-    <button id="createKeyBtn" class="seo-container__btn">API Key Oluştur</button>
-    <div id="keyResult" class="seo-container__result"></div>
-  </div>
-
-  <!-- Ürün bilgisi -->
-  <div class="seo-container__field">
-    <label for="title">Ürün Adı</label>
-    <input type="text" id="title" placeholder="Ör: Akıllı Saat">
-  </div>
-
-  <div class="seo-container__field">
-    <label for="keywords">Anahtar Kelimeler</label>
-    <input type="text" id="keywords" placeholder="Ör: akıllı saat, bluetooth, spor">
+    <button id="createKeyBtn">API Key Oluştur</button>
+    <div id="keyResult" class="result"></div>
   </div>
 
   <!-- SEO Oluştur -->
-  <div class="seo-container__field">
-    <button id="generateBtn" class="seo-container__btn">SEO Açıklama Oluştur</button>
+  <div class="seo-container">
+    <label id="productNameLabel">Ürün Adı</label>
+    <input type="text" id="title">
+    <label id="keywordsLabel">Anahtar Kelimeler</label>
+    <input type="text" id="keywords">
+    <button id="generateBtn">SEO Açıklama Oluştur</button>
+    <div id="seoResult" class="result"></div>
   </div>
 
-  <div id="seoResult" class="seo-container__result"></div>
+  <!-- Ödeme -->
+  <div class="payment-container">
+    <button id="payBtn">Plan Satın Al (PayTR/Shopier)</button>
+  </div>
+
 </div>
-
-<script>
-const API_BASE = "https://seo-api-8qsy.onrender.com"; // Backend URL’in
-
-// Event listener ile JS DOM yüklenince bağlanıyor
-document.getElementById("createKeyBtn").addEventListener("click", createKey);
-document.getElementById("generateBtn").addEventListener("click", generateSEO);
-
-async function createKey() {
-  const plan = document.getElementById("planSelect").value;
-
-  try {
-    const res = await fetch(API_BASE + "/create-api-key", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan })
-    });
-
-    const data = await res.json();
-    document.getElementById("keyResult").innerText = "API Key:\n" + data.api_key;
-  } catch (err) {
-    console.error(err);
-    alert("API Key oluşturulamadı!");
-  }
-}
-
-async function generateSEO() {
-  const apiKey = document.getElementById("keyResult").innerText.split("\n")[1];
-  const title = document.getElementById("title").value;
-  const keywords = document.getElementById("keywords").value;
-
-  if (!apiKey) { alert("Önce API Key oluşturun!"); return; }
-  if (!title || !keywords) { alert("Ürün adı ve anahtar kelimeleri girin!"); return; }
-
-  try {
-    const res = await fetch(API_BASE + "/generate-seo", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey
-      },
-      body: JSON.stringify({ title, keywords })
-    });
-
-    const data = await res.json();
-    document.getElementById("seoResult").innerText = data.seo_description || "Hata oluştu!";
-  } catch (err) {
-    console.error(err);
-    document.getElementById("seoResult").innerText = "Hata oluştu!";
-  }
-}
-</script>
-
+<script src="js/main.js"></script>
 </body>
 </html>

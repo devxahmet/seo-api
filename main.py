@@ -1,51 +1,49 @@
-from fastapi import FastAPI, Header, HTTPException, Depends
+from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy import create_engine, Column, Integer, String, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
-import os
-import secrets
+import os, secrets, bcrypt, datetime
 from openai import OpenAI
 
+# Environment variables
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./seo_api.db")
-engine = create_engine(DATABASE_URL)
+OPENAI_KEY = os.getenv("OPENAI_API_KEY")
+
+# Database setup
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
-class APIKey(Base):
-    __tablename__ = "api_keys"
-    id = Column(Integer, primary_key=True, index=True)
-    api_key = Column(String, unique=True, index=True)
+# Models
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True)
+    username = Column(String, unique=True)
+    password = Column(String)
+    api_key = Column(String, unique=True)
     plan = Column(String)
     limit = Column(Integer)
     used = Column(Integer, default=0)
 
+class Payment(Base):
+    __tablename__ = "payments"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer)
+    amount = Column(Integer)
+    status = Column(String)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="SEO API")
+# FastAPI app
+app = FastAPI(title="SEO WebApp API")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# OpenAI client
+client = OpenAI(api_key=OPENAI_KEY)
 
-@app.get("/")
-def read_index():
-    return FileResponse(os.path.join(os.path.dirname(__file__), "index.html"))
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-class SEORequest(BaseModel):
-    title: str
-    keywords: str
-
-class CreateKeyRequest(BaseModel):
-    plan: str
-
+# DB dependency
 def get_db():
     db = SessionLocal()
     try:
@@ -53,36 +51,86 @@ def get_db():
     finally:
         db.close()
 
-@app.post("/create-api-key")
-def create_api_key(data: CreateKeyRequest, db: Session = Depends(get_db)):
-    plans = {"basic": 1000, "pro": 10000, "agency": -1}
-    if data.plan not in plans:
-        raise HTTPException(status_code=400, detail="Invalid plan")
-    api_key = f"{data.plan}_{secrets.token_hex(8)}"
-    new_key = APIKey(api_key=api_key, plan=data.plan, limit=plans[data.plan], used=0)
-    db.add(new_key)
-    db.commit()
-    return {"api_key": api_key, "plan": data.plan, "limit": plans[data.plan]}
+# Schemas
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
 
-@app.post("/generate-seo")
-def generate_seo(data: SEORequest, x_api_key: str = Header(None), db: Session = Depends(get_db)):
-    if not x_api_key:
-        raise HTTPException(status_code=401, detail="Missing API Key")
-    key = db.query(APIKey).filter(APIKey.api_key == x_api_key).first()
-    if not key:
-        raise HTTPException(status_code=401, detail="Invalid API Key")
-    if key.limit != -1 and key.used >= key.limit:
-        raise HTTPException(status_code=429, detail="API limit exceeded")
-    prompt = f"Ürün adı: {data.title}\nAnahtar kelimeler: {data.keywords}\nTürkçe, SEO uyumlu, özgün ve satış odaklı e-ticaret ürün açıklaması yaz."
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=250
-    )
-    key.used += 1
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class SEORequest(BaseModel):
+    title: str
+    keywords: str
+
+class PlanRequest(BaseModel):
+    plan: str
+
+# Auth endpoints
+@app.post("/register")
+def register(data: RegisterRequest, db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.username==data.username).first()
+    if existing: raise HTTPException(400, "Kullanıcı zaten var")
+    hashed = bcrypt.hashpw(data.password.encode(), bcrypt.gensalt()).decode()
+    api_key = secrets.token_hex(8)
+    user = User(username=data.username, password=hashed, api_key=api_key, plan="basic", limit=1000, used=0)
+    db.add(user)
     db.commit()
-    return {"plan": key.plan, "used": key.used, "limit": key.limit, "seo_description": response.choices[0].message.content}
+    return {"message":"Kayıt başarılı", "api_key":api_key}
+
+@app.post("/login")
+def login(data: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username==data.username).first()
+    if not user or not bcrypt.checkpw(data.password.encode(), user.password.encode()):
+        raise HTTPException(401, "Kullanıcı adı veya şifre yanlış")
+    return {"message":"Giriş başarılı", "api_key":user.api_key}
+
+# SEO API endpoint
+@app.post("/generate-seo")
+def generate_seo(data: SEORequest, x_api_key: str = Header(...), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.api_key==x_api_key).first()
+    if not user: raise HTTPException(401, "Geçersiz API Key")
+    if user.limit != -1 and user.used >= user.limit: raise HTTPException(429, "API limiti doldu")
+    prompt = f"Ürün adı: {data.title}\nAnahtar kelimeler: {data.keywords}\nTürkçe, SEO uyumlu, satış odaklı e-ticaret açıklaması yaz."
+    response = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role":"user","content":prompt}], max_tokens=250)
+    user.used += 1
+    db.commit()
+    return {"plan":user.plan,"used":user.used,"limit":user.limit,"seo_description":response.choices[0].message.content}
+
+# API Key / Plan endpoint
+@app.post("/create-api-key")
+def create_key(data: PlanRequest, x_api_key: str = Header(...), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.api_key==x_api_key).first()
+    if not user: raise HTTPException(401, "Geçersiz API Key")
+
+    # Eğer hâlihazırda aktif API Key varsa
+    if user.used < user.limit or user.limit == -1:
+        return {"message": "Zaten aktif bir API Key'in var, plan bitene kadar yeni oluşturamazsın.", 
+                "api_key": user.api_key, 
+                "plan": user.plan, 
+                "used": user.used, 
+                "limit": user.limit}
+
+    plans = {"basic":1000, "pro":10000, "agency":-1}
+    if data.plan not in plans: raise HTTPException(400, "Geçersiz plan")
+
+    new_api_key = secrets.token_hex(8)
+    user.api_key = new_api_key
+    user.plan = data.plan
+    user.limit = plans[data.plan]
+    user.used = 0
+    db.commit()
+    return {"message":"Yeni API Key oluşturuldu", "api_key":new_api_key, "plan":user.plan, "limit":user.limit}
+
+# Ödeme webhook (PayTR / Shopier)
+@app.post("/payment-webhook")
+def payment_webhook(user_id: int, amount: int, status: str, db: Session = Depends(get_db)):
+    payment = Payment(user_id=user_id, amount=amount, status=status)
+    db.add(payment)
+    db.commit()
+    return {"message":"Webhook kaydedildi"}
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "message": "SEO API running"}
+    return {"status":"ok","message":"SEO WebApp API çalışıyor"}

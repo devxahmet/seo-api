@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Header, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
@@ -46,8 +46,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static files (index.html)
-app.mount("/", StaticFiles(directory=os.path.dirname(__file__), html=True), name="static")
+# --------------------
+# ROOT INDEX.HTML
+# --------------------
+@app.get("/")
+def read_index():
+    return FileResponse(os.path.join(os.path.dirname(__file__), "index.html"))
 
 # OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))

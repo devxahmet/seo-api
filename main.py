@@ -40,7 +40,7 @@ app = FastAPI(title="SEO Description API")
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tüm frontendler için
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,6 +49,7 @@ app.add_middleware(
 # Static files (index.html)
 app.mount("/", StaticFiles(directory=os.path.dirname(__file__), html=True), name="static")
 
+# OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # --------------------
@@ -148,7 +149,7 @@ def generate_seo(
     }
 
 # --------------------
-# ROOT
+# HEALTH CHECK
 # --------------------
 @app.get("/health")
 def root():

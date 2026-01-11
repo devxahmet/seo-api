@@ -1,17 +1,46 @@
-<h1>Dashboard</h1>
-<button onclick="createKey()">API Key Oluştur</button>
-<pre id="result"></pre>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>SeoX API - Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body style="background:#0b0f1a;color:white;padding:40px">
+
+<h1>🚀 SeoX API Dashboard</h1>
+
+<p>API Key'in:</p>
+<pre id="apiKeyBox">Henüz oluşturulmadı</pre>
+
+<button onclick="createKey()">🔑 API Key Oluştur</button>
 
 <script>
+const API_BASE = "https://seo-api-8qsy.onrender.com";
 const token = localStorage.getItem("token");
 
+if(!token){
+  alert("Giriş yapman gerekiyor");
+  window.location.href = "/";
+}
+
 function createKey(){
-  fetch("https://seo-api-8qsy.onrender/create-api-key",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ token })
+  fetch(`${API_BASE}/create-api-key?token=${token}`,{
+    method:"POST"
   })
-  .then(r=>r.json())
-  .then(d=> document.getElementById("result").innerText = JSON.stringify(d,null,2))
+  .then(async r=>{
+    const data = await r.json();
+    if(!r.ok){
+      alert(data.detail || "Hata oluştu");
+      return;
+    }
+    document.getElementById("apiKeyBox").innerText = data.api_key;
+  })
+  .catch(err=>{
+    alert("Sunucu hatası");
+    console.error(err);
+  });
 }
 </script>
+
+</body>
+</html>
